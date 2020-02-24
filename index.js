@@ -14,7 +14,7 @@ async function assumeRole(params) {
   // Assume a role to get short-lived credentials using longer-lived credentials.
   const isDefined = i => !!i;
 
-  const {roleToAssume, roleDurationSeconds, accessKeyId, secretAccessKey, sessionToken, region} = params;
+  const {roleToAssume, roleDurationSeconds, accessKeyId, secretAccessKey, sessionToken, region, externalId} = params;
   assert(
       [roleToAssume, roleDurationSeconds, accessKeyId, secretAccessKey, region].every(isDefined),
       "Missing required input when assuming a Role."
@@ -35,6 +35,7 @@ async function assumeRole(params) {
     RoleArn: roleToAssume,
     RoleSessionName: 'GitHubActions',
     DurationSeconds: roleDurationSeconds,
+    ...(externalId ? {ExternalId: externalId} : {}),
     Tags: [
       {Key: 'GitHub', Value: 'Actions'},
       {Key: 'Repository', Value: GITHUB_REPOSITORY},
@@ -121,11 +122,12 @@ async function run() {
     const maskAccountId = core.getInput('mask-aws-account-id', { required: false });
     const roleToAssume = core.getInput('role-to-assume', {required: false});
     const roleDurationSeconds = core.getInput('role-duration-seconds', {required: false}) || MAX_ACTION_RUNTIME;
+    const externalId = core.getInput('external-id', {required: false})
 
     // Get role credentials if configured to do so
     if (roleToAssume) {
       const roleCredentials = await assumeRole(
-          {accessKeyId, secretAccessKey, sessionToken, region, roleToAssume, roleDurationSeconds}
+          {accessKeyId, secretAccessKey, sessionToken, region, roleToAssume, roleDurationSeconds, externalId}
       );
       exportCredentials(roleCredentials);
     } else {

@@ -131,6 +131,26 @@ describe('Configure AWS Credentials', () => {
         expect(core.setSecret).toHaveBeenCalledWith(FAKE_ACCOUNT_ID);
     });
 
+    test('externalId is optional', async () => {
+        const mockInputs = {...REQUIRED_INPUTS, 'aws-region': 'eu-west-1'};
+        core.getInput = jest
+            .fn()
+            .mockImplementation(mockGetInput(mockInputs));
+
+        await run();
+        expect(mockStsAssumeRole).toHaveBeenCalledTimes(0);
+        expect(core.exportVariable).toHaveBeenCalledTimes(4);
+        expect(core.setSecret).toHaveBeenCalledTimes(3);
+        expect(core.exportVariable).toHaveBeenCalledWith('AWS_ACCESS_KEY_ID', FAKE_ACCESS_KEY_ID);
+        expect(core.setSecret).toHaveBeenCalledWith(FAKE_ACCESS_KEY_ID);
+        expect(core.exportVariable).toHaveBeenCalledWith('AWS_SECRET_ACCESS_KEY', FAKE_SECRET_ACCESS_KEY);
+        expect(core.setSecret).toHaveBeenCalledWith(FAKE_SECRET_ACCESS_KEY);
+        expect(core.exportVariable).toHaveBeenCalledWith('AWS_DEFAULT_REGION', 'eu-west-1');
+        expect(core.exportVariable).toHaveBeenCalledWith('AWS_REGION', 'eu-west-1');
+        expect(core.setOutput).toHaveBeenCalledWith('aws-account-id', FAKE_ACCOUNT_ID);
+        expect(core.setSecret).toHaveBeenCalledWith(FAKE_ACCOUNT_ID);
+    });
+
     test('can opt out of masking account ID', async () => {
         const mockInputs = {...REQUIRED_INPUTS, 'aws-region': 'us-east-1', 'mask-aws-account-id': 'false'};
         core.getInput = jest
@@ -237,6 +257,29 @@ describe('Configure AWS Credentials', () => {
             ]
         })
     });
+
+    test('external id provided', async() => {
+        core.getInput = jest
+            .fn()
+            .mockImplementation(mockGetInput({...ASSUME_ROLE_INPUTS, 'external-id': 'externalId'}));
+
+        await run();
+        expect(mockStsAssumeRole).toHaveBeenCalledWith({
+            RoleArn: ROLE_NAME,
+            RoleSessionName: 'GitHubActions',
+            ExternalId: 'externalId',
+            DurationSeconds: 6 * 3600,
+            Tags: [
+                {Key: 'GitHub', Value: 'Actions'},
+                {Key: 'Repository', Value: ENVIRONMENT_VARIABLE_OVERRIDES.GITHUB_REPOSITORY},
+                {Key: 'Workflow', Value: ENVIRONMENT_VARIABLE_OVERRIDES.GITHUB_WORKFLOW},
+                {Key: 'Action', Value: ENVIRONMENT_VARIABLE_OVERRIDES.GITHUB_ACTION},
+                {Key: 'Actor', Value: GITHUB_ACTOR_SANITIZED},
+                {Key: 'Branch', Value: ENVIRONMENT_VARIABLE_OVERRIDES.GITHUB_REF},
+                {Key: 'Commit', Value: ENVIRONMENT_VARIABLE_OVERRIDES.GITHUB_SHA},
+            ]
+        })
+    })
 
     test('workflow name sanitized in role assumption tags', async () => {
         core.getInput = jest

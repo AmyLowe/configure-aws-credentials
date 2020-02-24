@@ -25,6 +25,9 @@ inputs:
   role-duration-seconds:
     description: "Role duration in seconds (default: 6 hours)"
     required: false
+  external-id:
+    description: "A value that can be passed in as the --external-id parameter when assuming a role."
+    required: false
 outputs:
   aws-account-id:
     description: 'The AWS account ID for the provided credentials'
